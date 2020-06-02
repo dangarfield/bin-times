@@ -118,7 +118,7 @@ exports.handler = async (event, context) => {
     code = event.queryStringParameters.code
   }
   console.log('code', code)
-  if (code === 'refuse-resist') {
+  if (code === process.env.CODE) {
     await updateBins()
     return {
       statusCode: 200,
