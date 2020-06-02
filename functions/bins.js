@@ -118,7 +118,7 @@ exports.handler = async (event, context) => {
     code = event.queryStringParameters.code
   }
   console.log('code', code)
-  if (code === 'thing') {
+  if (code === process.env.BINS_ACCESS_CODE) {
     await updateBins()
     return {
       statusCode: 200,
