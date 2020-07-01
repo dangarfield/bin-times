@@ -31,8 +31,8 @@ const getAlertDates = async () => {
   let alertDates = dates.map((d) => {
     let date = moment(d.dateString).subtract(1, 'days')
     d.week = date.isoWeek()
-    d.alarmDateTimeStringStart = `${date.format('YYYY-MM-DD')}T20:00:00.000`
-    d.alarmDateTimeStringEnd = `${date.format('YYYY-MM-DD')}T21:00:00.000`
+    d.alarmDateTimeStringStart = `${date.format('YYYY-MM-DD')}T20:30:00.000`
+    d.alarmDateTimeStringEnd = `${date.format('YYYY-MM-DD')}T21:30:00.000`
     d.alarmTitle = `Bins - ${d.type.charAt(0).toUpperCase() + d.type.slice(1)} - For tomorrow`
     return d
   })
