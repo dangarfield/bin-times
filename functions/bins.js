@@ -16,7 +16,7 @@ const getDates = async () => {
   const lines = res.body.toString('utf8').split(/\r?\n/)
     .filter(l => l.includes('<p class="colordark-blue fontfamilyArial fontsize12rem">') && !l.includes('day</p>'))
     .map(l => l.split('>')[1].replace('</p',''))
-  // console.log('lines', lines)
+  console.log('lines', lines)
 
   let dates = []
   for (let i = 0; i < lines.length; i=i+2) {
