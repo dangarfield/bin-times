@@ -1,22 +1,50 @@
 const {google} = require('googleapis')
 const {JWT} = require('google-auth-library')
-const p = require('phin')
 const moment = require('moment')
+const axios = require('axios')
+const cheerio = require('cheerio')
 require('dotenv').config()
 
 const getDates = async () => {
-  const currentDate = new Date();
-  const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
-  const day = currentDate.getDate().toString().padStart(2, '0');
-  const url = process.env.BINS_URL.replace('2024/07/18',`${currentDate.getFullYear()}/${month}/${day}`)
-  console.log('url', url)
-  const res = await p(url)
-  const bodyString = res.body.toString('utf8')
 
-  const lines = res.body.toString('utf8').split(/\r?\n/)
-    .filter(l => l.includes('<p class="colordark-blue fontfamilyArial fontsize12rem">') && !l.includes('day</p>'))
-    .map(l => l.split('>')[1].replace('</p',''))
-  console.log('lines', lines)
+  axios.defaults.withCredentials = true
+
+  const p1Html = (await axios.get('https://uhtn-wrp.whitespacews.com/')).data
+  // console.log('p1Html',p1Html)
+  let $ = cheerio.load(p1Html)
+  const p1Link = $('a.govuk-link:contains("Find my bin")')[0]
+  const p1Href = $(p1Link).attr('href')
+  console.log('p1Href', p1Href)
+
+  const p2Href = p1Href.replace('seq=1','seq=2')
+
+  const form = new FormData()
+  form.append('address_name_number', process.env.ADDRESS_NO)
+  form.append('address_street', '')
+  form.append('street_town', '')
+  form.append('address_postcode', process.env.ADDRESS_POSTCODE)
+
+  const p3Html = (await axios({
+    method: "post",
+    url: p2Href,
+    data: form,
+    headers: { "Content-Type": "multipart/form-data" },
+  })).data
+  // console.log('p3Html',p3Html)
+  $ = cheerio.load(p3Html)
+  const p3Link = $('a.govuk-link.clicker')[0]
+  // console.log('p3Link', p3Link)
+  const p3Href = 'https://uhtn-wrp.whitespacews.com/' + $(p3Link).attr('href')
+  console.log('p3Href', p3Href)
+
+  const p4Html = (await axios.get(p3Href)).data
+  // console.log('p4Html',p4Html)
+  $ = cheerio.load(p4Html)
+  const lines = $('#scheduled-collections li p').map((i, el) => {
+    return $(el).text()
+  }).get()
+
+  // console.log('list', list, list.length)
 
   let dates = []
   for (let i = 0; i < lines.length; i=i+2) {
