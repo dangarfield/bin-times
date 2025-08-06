@@ -1,0 +1,28 @@
+{
+  "name": "bin-times-deploy",
+  "version": "1.0.0",
+  "description": "CDK deployment for bin times scraper",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "deploy": "node deploy-direct.js",
+    "deploy-cdk": "cdk deploy --profile dan-sso --require-approval never && node update-lambda.js",
+    "deploy-infra": "cdk deploy --profile dan-sso --require-approval never",
+    "update-code": "node update-lambda.js",
+    "synth": "cdk synth --profile dan-sso",
+    "diff": "cdk diff --profile dan-sso",
+    "destroy": "cdk destroy --profile dan-sso --force"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.209.1",
+    "constructs": "^10.4.2",
+    "dotenv": "^17.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
