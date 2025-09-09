@@ -1,0 +1,17 @@
+{
+  "name": "bin-collection-playwright-scraper",
+  "version": "1.0.0",
+  "description": "Playwright-based scraper for North Hertfordshire Council bin collection times",
+  "main": "scraper.js",
+  "scripts": {
+    "start": "node scraper.js",
+    "install-browsers": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.2",
+    "playwright-core": "^1.40.0"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}

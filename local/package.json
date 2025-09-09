@@ -1,0 +1,17 @@
+{
+  "name": "bin-collection-local-dev",
+  "version": "1.0.0",
+  "description": "Local development environment for bin collection scraper",
+  "main": "test-local.js",
+  "scripts": {
+    "start": "node test-local.js",
+    "install-browsers": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.2",
+    "playwright": "^1.40.0"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}

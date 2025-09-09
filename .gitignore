@@ -1,5 +1,9 @@
-.netlify
-credentials.json
-.env
 node_modules
+.env
 .DS_Store
+Thumbs.db
+local/test-local.js
+local/scraper-local.js
+lambda-code.zip
+scraper.bak.js
+response.json
