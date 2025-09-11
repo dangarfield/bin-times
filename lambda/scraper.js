@@ -1,6 +1,8 @@
 // Import dependencies based on environment
 let playwright, chromium;
 
+const writeIntoCalender = true // For debugging
+
 if (process.env.IS_LOCAL === 'true') {
     // Local environment - use regular playwright
     try {
@@ -137,14 +139,22 @@ async function scrapeBinCollection(address) {
 
         // Navigate to the page
         console.log('📄 Navigating to the bin collection page...');
-        await page.goto('https://waste.nc.north-herts.gov.uk/w/webpage/find-bin-collection-day-input-address', {
+        const response = await page.goto('https://waste.nc.north-herts.gov.uk/w/webpage/find-bin-collection-day-input-address', {
             waitUntil: 'domcontentloaded',
             timeout: 30000
         });
 
-        // Wait for the page to fully load
+        // Check if the page loaded successfully
+        if (!response || !response.ok()) {
+            throw new Error(`Failed to load page: ${response ? response.status() : 'No response'}`);
+        }
+
+        // Wait for the page to fully load and verify we're on the right page
         console.log('⏳ Waiting for page to load...');
         await page.waitForTimeout(3000);
+        
+        const pageTitle = await page.title();
+        console.log('📄 Page loaded successfully:', pageTitle);
 
         // Wait for the form to be present
         console.log('🔍 Looking for the form...');
@@ -160,22 +170,60 @@ async function scrapeBinCollection(address) {
         console.log(`⌨️  Typing address: ${address}`);
         await addressInput.click();
         await addressInput.fill(''); // Clear first
+        //await page.waitForTimeout(500); // Small delay after clearing
         await addressInput.fill(address); // Fill the address
-
-        // Wait for AJAX request to complete
-        console.log('⏳ Waiting for AJAX request...');
         await page.waitForTimeout(2000);
+        // Verify the address was typed correctly
+        const typedValue = await addressInput.inputValue();
+        console.log(`✅ Address typed successfully: "${typedValue}"`);
+        
+        if (typedValue !== address) {
+            console.log(`⚠️ Warning: Typed value doesn't match expected address`);
+        }
 
-        // Find the type ahead results
-        const selector = 'div.relation_path_type_ahead_results_holder li'
-        try {
-            console.log(`🔍 Trying selector: ${selector}`);
-            await page.waitForSelector(selector, { timeout: 3000 });
-            firstResult = page.locator(selector).first();
-            console.log(`✅ Found results with selector: ${selector}`);
-        } catch (error) {
-            console.log(`❌ Selector ${selector} not found`);
-            throw new Error('No search results found with any selector');
+        // Wait for AJAX request to complete and search results to appear
+        console.log('⏳ Waiting for search results to appear...');
+        const selector = 'div.relation_path_type_ahead_results_holder li';
+        let firstResult;
+        
+        // Implement retry logic with proper waiting
+        const maxRetries = 3;
+        let retryCount = 0;
+        
+        while (retryCount < maxRetries) {
+            try {
+                console.log(`🔍 Attempt ${retryCount + 1}/${maxRetries}: Looking for search results...`);
+                
+                // Wait up to 15 seconds for the search results to appear
+                await page.waitForSelector(selector, { timeout: 15000 });
+                firstResult = page.locator(selector).first();
+                
+                // Verify the result is actually visible and clickable
+                await firstResult.waitFor({ state: 'visible', timeout: 5000 });
+                
+                console.log(`✅ Found search results on attempt ${retryCount + 1}`);
+                break;
+                
+            } catch (error) {
+                retryCount++;
+                console.log(`❌ Attempt ${retryCount}/${maxRetries} failed: ${error.message}`);
+                
+                if (retryCount < maxRetries) {
+                    console.log('🔄 Retrying search...');
+                    
+                    // Clear the input and try typing again
+                    await addressInput.click();
+                    await addressInput.fill('');
+                    await page.waitForTimeout(1000);
+                    await addressInput.fill(address);
+                    
+                    // Wait a bit longer before next attempt
+                    await page.waitForTimeout(3000);
+                } else {
+                    console.log('❌ All retry attempts exhausted');
+                    throw new Error(`No search results found after ${maxRetries} attempts. The website may be slow or experiencing issues.`);
+                }
+            }
         }
 
         // Click on the first result
@@ -252,20 +300,32 @@ async function scrapeBinCollection(address) {
 
     } catch (error) {
         console.error('❌ Error during scraping:', error.message);
+        console.error('❌ Error stack:', error.stack);
 
         // Take a screenshot for debugging if possible
         if (page) {
             try {
-                await page.screenshot({ path: 'error-screenshot.png', fullPage: true });
-                console.log('📸 Screenshot saved as error-screenshot.png');
+                // Also log the current URL for debugging
+                const currentUrl = page.url();
+                console.log('📍 Error occurred at URL:', currentUrl);
+                
+                // Log page title for additional context
+                const pageTitle = await page.title().catch(() => 'Unknown');
+                console.log('📄 Page title:', pageTitle);
+                
+                if (process.env.IS_LOCAL === 'true') {
+                    await page.screenshot({ path: 'error-screenshot.png', fullPage: true });
+                    console.log('📸 Screenshot saved as error-screenshot.png');
+                }
             } catch (screenshotError) {
-                console.log('Could not take screenshot:', screenshotError.message);
+                console.log('Could not take screenshot or get page info:', screenshotError.message);
             }
         }
 
         return {
             success: false,
             error: error.message,
+            errorType: error.constructor.name,
             timestamp: new Date().toISOString()
         };
 
@@ -351,17 +411,21 @@ async function createCalendarEvents(collectionData, address) {
                     colorId: '2' // Green color for bin collection events
                 };
 
-                // Create the event
-                const createResponse = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(process.env.CALENDAR_ID)}/events`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(event)
-                });
-                // const createResponse = {ok:true}
-
+                let createResponse
+                if (writeIntoCalender) {
+                    // Create the event
+                     createResponse = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(process.env.CALENDAR_ID)}/events`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(event)
+                    });
+                } else {
+                    createResponse = {ok:true}
+                }
+                
                 if (createResponse.ok) {
                     console.log(`✅ Created reminder for ${wasteType} on ${reminderStart.toLocaleString('en-GB', { 
                         weekday: 'long', 
