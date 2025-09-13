@@ -391,7 +391,7 @@ async function createCalendarEvents(collectionData, address) {
                 const reminderEnd = new Date(reminderStart.getTime() + 60 * 60 * 1000); // Add 1 hour
 
                 const event = {
-                    summary: `🗑️ Bin Collection Reminder - ${wasteType}`,
+                    summary: `🗑️ ${wasteType} tomorrow`,
                     description: `Reminder to put out ${wasteType} bin for collection tomorrow.\n\nAddress: ${address}\nCollection Date: ${collectionDateStr}`,
                     start: {
                         dateTime: reminderStart.toISOString(),
